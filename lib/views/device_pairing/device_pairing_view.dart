@@ -1,13 +1,13 @@
+// views/device_pairing_view.dart
 import 'package:flutter/material.dart';
+import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:provider/provider.dart';
 import '../../config/app_strings.dart';
 import '../../config/app_colors.dart';
 import '../../controllers/device_pairing_controller.dart';
-import '../../models/mock_device.dart';
 import 'device_details_view.dart';
 
-/// Device Pairing screen: shows pull-to-refresh area and scanned devices.
-/// Uses DevicePairingController to demonstrate separation of logic.
+/// Shows a list of nearby BLE devices and lets user connect to one.
 class DevicePairingView extends StatelessWidget {
   const DevicePairingView({super.key});
 
@@ -35,11 +35,21 @@ class _DevicePairingBody extends StatelessWidget {
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
+        actions: [
+          IconButton(
+            icon: Icon(controller.isScanning ? Icons.stop : Icons.refresh),
+            onPressed: () {
+              if (controller.isScanning) {
+                controller.stopScan();
+              } else {
+                controller.startScan();
+              }
+            },
+          )
+        ],
       ),
       body: Column(
         children: [
-
-          // Scanning indicator
           if (controller.isScanning)
             Padding(
               padding: const EdgeInsets.all(12.0),
@@ -53,7 +63,6 @@ class _DevicePairingBody extends StatelessWidget {
               ),
             ),
 
-          // Device list
           Expanded(
             child: RefreshIndicator(
               onRefresh: () => controller.startScan(),
@@ -61,26 +70,24 @@ class _DevicePairingBody extends StatelessWidget {
                 padding: const EdgeInsets.all(16),
                 itemCount: controller.devices.length,
                 itemBuilder: (context, index) {
-                  final MockDevice device = controller.devices[index];
-                  return _deviceCard(context, device);
+                  final ScanResult result = controller.devices[index];
+                  return _deviceCard(context, result);
                 },
               ),
             ),
           ),
 
-          // Bottom bar with search & scan buttons in center
           Container(
             color: Colors.white,
             padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 5),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                Row(
-                  children: [
-                    _roundIconButton(icon: Icons.search, onPressed: () => controller.startScan()),
-                    const SizedBox(width: 20),
-                  ],
+                _roundIconButton(
+                  icon: Icons.search,
+                  onPressed: () => controller.startScan(),
                 ),
+                const SizedBox(width: 20),
               ],
             ),
           ),
@@ -89,7 +96,12 @@ class _DevicePairingBody extends StatelessWidget {
     );
   }
 
-  Widget _deviceCard(BuildContext context, MockDevice device) {
+  Widget _deviceCard(BuildContext context, ScanResult result) {
+    final BluetoothDevice device = result.device; // real device
+    final String name = (device.name.isNotEmpty) ? device.name : "Unknown Device";
+    final String id = device.id.toString();
+    final int rssi = result.rssi;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       child: Card(
@@ -100,29 +112,32 @@ class _DevicePairingBody extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Device info
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(device.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                    Text(name, style: const TextStyle(fontWeight: FontWeight.bold)),
                     const SizedBox(height: 6),
-                    Text(device.id),
+                    Text(id),
                     const SizedBox(height: 6),
-                    Text('Rssi ${device.rssi}'),
+                    Text('RSSI: $rssi'),
                   ],
                 ),
               ),
 
-              // Connect button and wifi icon
               Column(
                 children: [
                   ElevatedButton(
-                    onPressed: () {
-                      // When connected, navigate to device details page
+                    onPressed: () async {
+                      // Stop scanning before navigating
+                      final controller = Provider.of<DevicePairingController>(context, listen: false);
+                      await controller.stopScan();
+
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => DeviceDetailsView(device: device)),
+                        MaterialPageRoute(
+                          builder: (_) => DeviceDetailsView(device: device),
+                        ),
                       );
                     },
                     style: ElevatedButton.styleFrom(

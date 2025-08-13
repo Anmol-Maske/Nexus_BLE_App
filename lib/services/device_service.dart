@@ -1,18 +1,37 @@
-import 'dart:async';
-import '../models/mock_device.dart';
-
-/// Service that simulates BLE scanning.
-/// Replace with real BLE scanning logic later.
-class DeviceService {
-  // sample mocked devices
-  final List<MockDevice> _mockDevices = [
-    MockDevice(name: 'BLE Device 1', id: 'AA:BB:CC:DD:EE:FF', rssi: -65),
-    MockDevice(name: 'BLE Device 2', id: 'FF:EE:DD:CC:BB:AA', rssi: -78),
-  ];
-
-  /// Simulate scanning delay and return list
-  Future<List<MockDevice>> scanDevices() async {
-    await Future.delayed(const Duration(seconds: 2)); // mimic scan time
-    return List<MockDevice>.from(_mockDevices);
-  }
-}
+// import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+//
+// class DeviceService {
+//   final FlutterBluePlus flutterBlue = FlutterBluePlus.instance;
+//
+//   /// Start scanning for BLE devices
+//   Future<List<ScanResult>> scanDevices({Duration timeout = const Duration(seconds: 5)}) async {
+//     List<ScanResult> devices = [];
+//
+//     // Ensure no duplicate scans
+//     if (flutterBlue.isScanningNow) {
+//       await flutterBlue.stopScan();
+//     }
+//
+//     // Start scan
+//     await flutterBlue.startScan(timeout: timeout);
+//
+//     // Listen for devices
+//     await for (final results in flutterBlue.scanResults) {
+//       devices = results;
+//       // Break after timeout
+//       if (!flutterBlue.isScanningNow) break;
+//     }
+//
+//     return devices;
+//   }
+//
+//   /// Connect to a selected BLE device
+//   Future<void> connectToDevice(BluetoothDevice device) async {
+//     await device.connect(autoConnect: false);
+//   }
+//
+//   /// Disconnect from a BLE device
+//   Future<void> disconnectFromDevice(BluetoothDevice device) async {
+//     await device.disconnect();
+//   }
+// }

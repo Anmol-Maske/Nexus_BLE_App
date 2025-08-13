@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import '../../models/mock_device.dart';
 import '../../config/app_strings.dart';
 import '../../config/app_colors.dart';
@@ -6,7 +7,7 @@ import '../../config/app_colors.dart';
 /// Device details page shown after "Connect" is tapped.
 /// Matches the fingerprint + two red icons layout in your screenshot.
 class DeviceDetailsView extends StatelessWidget {
-  final MockDevice device;
+  final BluetoothDevice device;
 
   const DeviceDetailsView({super.key, required this.device});
 
@@ -26,8 +27,6 @@ class DeviceDetailsView extends StatelessWidget {
               color: AppColors.cardMint,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               child: ListTile(
-                title: Text(device.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                subtitle: Text(device.id),
                 trailing: CircleAvatar(
                   backgroundColor: Colors.blue,
                   child: const Icon(Icons.bluetooth, color: Colors.white),

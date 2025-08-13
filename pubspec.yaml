@@ -1,5 +1,5 @@
-name: untitled
-description: A new Flutter project.
+name: nexus
+description: BLE based IOT App
 
 publish_to: 'none'
 
@@ -14,10 +14,11 @@ dependencies:
     sdk: flutter
 
   permission_handler: ^10.4.5
-  provider: ^6.1.1  # Add this line
+  provider: ^6.1.1
   google_fonts: ^6.1.0
   font_awesome_flutter: ^10.5.0
   url_launcher: ^6.3.0
+  flutter_blue_plus: ^1.35.5
 
 
 dev_dependencies:
