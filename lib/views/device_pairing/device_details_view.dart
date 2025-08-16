@@ -1,62 +1,149 @@
+// views/device_details_view.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
-import '../../models/mock_device.dart';
 import '../../config/app_strings.dart';
 import '../../config/app_colors.dart';
 
 /// Device details page shown after "Connect" is tapped.
-/// Matches the fingerprint + two red icons layout in your screenshot.
-class DeviceDetailsView extends StatelessWidget {
+/// Layout: Device name + ID on left, Disconnect button on right.
+/// Features:
+///   - Disconnect when pressing back (AppBar/system back button).
+///   - Disconnect when app is closed or screen is disposed.
+class DeviceDetailsView extends StatefulWidget {
   final BluetoothDevice device;
 
   const DeviceDetailsView({super.key, required this.device});
 
   @override
+  State<DeviceDetailsView> createState() => _DeviceDetailsViewState();
+}
+
+class _DeviceDetailsViewState extends State<DeviceDetailsView> {
+  @override
+  void dispose() {
+    // Ensure device is disconnected when widget is removed (e.g., app closed/killed)
+    _disconnectDevice();
+    super.dispose();
+  }
+
+  /// Helper to disconnect device safely
+  Future<void> _disconnectDevice() async {
+    try {
+      await widget.device.disconnect();
+      debugPrint("Device disconnected.");
+    } catch (e) {
+      debugPrint("Error while disconnecting: $e");
+    }
+  }
+
+  /// Handle back button press (AppBar/system back)
+  Future<bool> _onWillPop() async {
+    await _disconnectDevice();
+    return true; // allow navigation
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text(AppStrings.deviceInformation),
-        leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => Navigator.pop(context)),
-      ),
-      body: Column(
-        children: [
-          // Device info card
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Card(
-              color: AppColors.cardMint,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              child: ListTile(
-                trailing: CircleAvatar(
-                  backgroundColor: Colors.blue,
-                  child: const Icon(Icons.bluetooth, color: Colors.white),
+    return WillPopScope(
+      onWillPop: _onWillPop, // Back button override
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text(AppStrings.deviceInformation),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () async {
+              await _disconnectDevice();
+              Navigator.pop(context);
+            },
+          ),
+        ),
+        body: Column(
+          children: [
+            // =========================
+            // Device Row (Name + ID + Disconnect Button)
+            // =========================
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: AppColors.cardMint,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    // Left side → Device Name + ID
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.device.platformName.isNotEmpty
+                              ? widget.device.platformName
+                              : "Unknown Device",
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          widget.device.remoteId.str,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: Colors.black54,
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    // Right side → Disconnect Button
+                    ElevatedButton(
+                      onPressed: () async {
+                        await _disconnectDevice();
+                        if (mounted) Navigator.pop(context);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: Colors.black87,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30), // pill shape
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 10,
+                        ),
+                      ),
+                      child: const Text("Disconnect"),
+                    ),
+                  ],
                 ),
               ),
             ),
-          ),
 
-          // Spacer to center fingerprint button near bottom
-          const Expanded(child: SizedBox()),
+            // Spacer → Pushes the bottom buttons down
+            const Expanded(child: SizedBox()),
 
-          const SizedBox(height: 22),
+            // =========================
+            // Two Action Buttons (Settings + Docs)
+            // =========================
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _smallSquareButton(icon: Icons.settings, onTap: () {}),
+                const SizedBox(width: 14),
+                _smallSquareButton(icon: Icons.article, onTap: () {}),
+              ],
+            ),
 
-          // Two small square red action icons below fingerprint (settings & doc)
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _smallSquareButton(icon: Icons.settings, onTap: () {}),
-              const SizedBox(width: 14),
-              _smallSquareButton(icon: Icons.article, onTap: () {}),
-            ],
-          ),
-
-          const SizedBox(height: 22),
-
-        ],
+            const SizedBox(height: 22),
+          ],
+        ),
       ),
     );
   }
 
+  /// Helper for bottom small square buttons
   Widget _smallSquareButton({required IconData icon, required VoidCallback onTap}) {
     return GestureDetector(
       onTap: onTap,
