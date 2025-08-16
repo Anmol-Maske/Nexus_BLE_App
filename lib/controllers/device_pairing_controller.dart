@@ -9,10 +9,10 @@ class DevicePairingController extends ChangeNotifier {
   StreamSubscription<List<ScanResult>>? _scanSub;
   Timer? _scanTimer;
 
-  // internal map to dedupe by device id
+  // Internal map for device deduplication
   final Map<String, ScanResult> _resultsMap = {};
 
-  // exposed list (sorted) for UI
+  // Exposed device list for UI (sorted)
   List<ScanResult> devices = [];
 
   bool isScanning = false;
@@ -20,54 +20,57 @@ class DevicePairingController extends ChangeNotifier {
   DateTime _lastNotify = DateTime.fromMillisecondsSinceEpoch(0);
   final Duration _notifyThrottle = const Duration(milliseconds: 300);
 
+  /// Ensure required runtime permissions are granted before scanning
+  /// - Android 12+ requires: bluetoothScan + bluetoothConnect (advertise optional)
+  /// - Android <12 requires: bluetoothScan + fine location
+  /// - iOS requires nothing extra (handled by OS)
   Future<bool> ensurePermissions() async {
     if (!Platform.isAndroid) return true;
 
     final statuses = await [
       Permission.bluetoothScan,
       Permission.bluetoothConnect,
-      Permission.locationWhenInUse,
+      Permission.bluetoothAdvertise,
+      Permission.locationWhenInUse, // legacy fallback
     ].request();
 
-    final scanGranted = statuses[Permission.bluetoothScan]?.isGranted ?? false;
-    final connectGranted = statuses[Permission.bluetoothConnect]?.isGranted ?? false;
-    final locGranted = statuses[Permission.locationWhenInUse]?.isGranted ?? false;
+    final scan = statuses[Permission.bluetoothScan]?.isGranted ?? false;
+    final connect = statuses[Permission.bluetoothConnect]?.isGranted ?? false;
+    final advertise = statuses[Permission.bluetoothAdvertise]?.isGranted ?? false;
+    final loc = statuses[Permission.locationWhenInUse]?.isGranted ?? false;
 
-    return (scanGranted && connectGranted) || (scanGranted && locGranted);
+    // Android 12+ path
+    if (scan && connect) return true;
+    // Legacy fallback for Android <12
+    if (scan && loc) return true;
+
+    debugPrint('[FBP] Permissions missing → scan=$scan connect=$connect advertise=$advertise location=$loc');
+    return false;
   }
 
   Future<void> startScan({Duration timeout = const Duration(seconds: 8)}) async {
     if (isScanning) return;
 
-    final ok = await ensurePermissions();
-    if (!ok) {
-      debugPrint('[FBP] Permissions not granted, abort scan');
+    if (!(await ensurePermissions())) {
+      debugPrint('[FBP] Permissions not granted, aborting scan');
       return;
     }
 
-    // clean previous state
     _resultsMap.clear();
     devices = [];
     isScanning = true;
     notifyListeners();
 
-    // cancel previous subscription if any
     await _scanSub?.cancel();
     _scanSub = FlutterBluePlus.scanResults.listen((results) {
-      // update map with latest result for each device
-      for (final r in results) {
-        final id = r.device.id.toString();
-        _resultsMap[id] = r;
+      for (var r in results) {
+        _resultsMap[r.device.id.toString()] = r;
       }
-
-      // throttle UI updates to avoid rebuild storms
       final now = DateTime.now();
       if (now.difference(_lastNotify) >= _notifyThrottle) {
         _lastNotify = now;
-        // convert map -> list, sort by rssi desc (higher/less negative first)
-        final list = _resultsMap.values.toList();
-        list.sort((a, b) => b.rssi.compareTo(a.rssi));
-        devices = list;
+        devices = _resultsMap.values.toList()
+          ..sort((a, b) => b.rssi.compareTo(a.rssi));
         debugPrint('[FBP] notify devices=${devices.length}');
         notifyListeners();
       }
@@ -75,16 +78,14 @@ class DevicePairingController extends ChangeNotifier {
       debugPrint('[FBP] scanResults error: $e');
     });
 
-    // defensive stop before starting
     try {
       await FlutterBluePlus.stopScan();
     } catch (_) {}
 
-    // start scan (do not await a future which may be void)
     try {
       FlutterBluePlus.startScan(
         continuousUpdates: true,
-        androidUsesFineLocation: true,
+        androidUsesFineLocation: true, // keep for legacy
         androidScanMode: AndroidScanMode.lowLatency,
       );
       debugPrint('[FBP] startScan called');
@@ -94,7 +95,6 @@ class DevicePairingController extends ChangeNotifier {
       return;
     }
 
-    // schedule stop after timeout, but allow user to call stopScan earlier
     _scanTimer?.cancel();
     _scanTimer = Timer(timeout, () async {
       debugPrint('[FBP] scan timeout reached; stopping scan');
@@ -111,13 +111,10 @@ class DevicePairingController extends ChangeNotifier {
 
     _scanTimer?.cancel();
     _scanTimer = null;
-
     await _scanSub?.cancel();
     _scanSub = null;
-
     isScanning = false;
     notifyListeners();
-
     debugPrint('[FBP] stopScan: completed');
   }
 
