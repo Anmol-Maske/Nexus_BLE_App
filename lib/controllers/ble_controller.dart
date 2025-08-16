@@ -1,4 +1,4 @@
-// controllers/device_pairing_controller.dart
+// controllers/ble_controller.dart
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';

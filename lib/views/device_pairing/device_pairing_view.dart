@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 
 import '../../config/app_strings.dart';
 import '../../config/app_colors.dart';
-import '../../controllers/device_pairing_controller.dart';
+import '../../controllers/ble_controller.dart';
 import 'device_details_view.dart';
 import '../../utils/helpers.dart';
 

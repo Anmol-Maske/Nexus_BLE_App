@@ -1,14 +1,20 @@
 // views/device_details_view.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+
+// App config imports
 import '../../config/app_strings.dart';
 import '../../config/app_colors.dart';
+
+// Import the GATT Services/Characteristics screen
+import '../../views/device_pairing/device_ble_connect_view.dart';
 
 /// Device details page shown after "Connect" is tapped.
 /// Layout: Device name + ID on left, Disconnect button on right.
 /// Features:
 ///   - Disconnect when pressing back (AppBar/system back button).
 ///   - Disconnect when app is closed or screen is disposed.
+///   - Navigate to GATT services/characteristics screen (settings button).
 class DeviceDetailsView extends StatefulWidget {
   final BluetoothDevice device;
 
@@ -45,7 +51,7 @@ class _DeviceDetailsViewState extends State<DeviceDetailsView> {
   @override
   Widget build(BuildContext context) {
     return WillPopScope(
-      onWillPop: _onWillPop, // Back button override
+      onWillPop: _onWillPop, // Intercepts back button
       child: Scaffold(
         appBar: AppBar(
           title: const Text(AppStrings.deviceInformation),
@@ -130,8 +136,22 @@ class _DeviceDetailsViewState extends State<DeviceDetailsView> {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                _smallSquareButton(icon: Icons.settings, onTap: () {}),
+                // SETTINGS button → opens device_ble_connected_view.dart
+                _smallSquareButton(
+                  icon: Icons.settings,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            DeviceBleConnectedView(device: widget.device),
+                      ),
+                    );
+                  },
+                ),
                 const SizedBox(width: 14),
+
+                // DOCS button → Placeholder for now
                 _smallSquareButton(icon: Icons.article, onTap: () {}),
               ],
             ),

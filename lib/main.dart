@@ -13,7 +13,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Pennsy BLE App',
+      title: 'Nexus BLE App',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       home: const HomeView(),
