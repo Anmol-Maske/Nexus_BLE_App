@@ -1,6 +1,7 @@
-/// Small helper functions you can expand later
-String rssiToQuality(int rssi) {
-  if (rssi >= -50) return 'Excellent';
-  if (rssi >= -70) return 'Good';
-  return 'Weak';
+import 'package:flutter/material.dart';
+
+Color getRssiColor(int rssi) {
+  if (rssi >= -50) return Colors.green;     // Excellent
+  if (rssi >= -70) return Colors.orange;    // Good
+  return Colors.red;                        // Weak
 }

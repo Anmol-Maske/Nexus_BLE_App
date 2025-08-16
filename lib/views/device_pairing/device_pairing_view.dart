@@ -6,8 +6,10 @@ import '../../config/app_strings.dart';
 import '../../config/app_colors.dart';
 import '../../controllers/device_pairing_controller.dart';
 import 'device_details_view.dart';
+import '../../utils/helpers.dart';
 
-/// Shows a list of nearby BLE devices and lets user connect to one.
+/// DevicePairingView:
+/// Displays list of nearby BLE devices, scanning status, and connect buttons.
 class DevicePairingView extends StatelessWidget {
   const DevicePairingView({super.key});
 
@@ -30,39 +32,37 @@ class _DevicePairingBody extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: AppColors.primaryBlue,
-        title: const Text(AppStrings.devicesAvailable),
+        title: const Text(
+            AppStrings.devicesAvailable,
+            style: TextStyle(
+              color: AppColors.textPrimary,
+              fontWeight: FontWeight.w800,
+            ),
+        ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
-        actions: [
-          IconButton(
-            icon: Icon(controller.isScanning ? Icons.stop : Icons.refresh),
-            onPressed: () {
-              if (controller.isScanning) {
-                controller.stopScan();
-              } else {
-                controller.startScan();
-              }
-            },
-          )
-        ],
       ),
+
       body: Column(
         children: [
-          if (controller.isScanning)
-            Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: const [
-                  CircularProgressIndicator(),
-                  SizedBox(width: 12),
-                  Text('Scanning for devices...'),
-                ],
+          Container(
+            width: double.infinity,
+            color: AppColors.cardMint,
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Center(
+              child: Text(
+                controller.isScanning ? "Scanning..." : "Scanning Stopped",
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: controller.isScanning ? Colors.green : Colors.black,
+                ),
               ),
             ),
+          ),
 
+          /// Device list
           Expanded(
             child: RefreshIndicator(
               onRefresh: () => controller.startScan(),
@@ -76,39 +76,41 @@ class _DevicePairingBody extends StatelessWidget {
               ),
             ),
           ),
-
-          Container(
-            color: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 5),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                _roundIconButton(
-                  icon: Icons.search,
-                  onPressed: () => controller.startScan(),
-                ),
-                const SizedBox(width: 20),
-              ],
-            ),
-          ),
         ],
+      ),
+
+      /// Floating Action Button for scan toggle (bottom right)
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: AppColors.primaryBlue,
+        onPressed: () {
+          if (controller.isScanning) {
+            controller.stopScan();
+          } else {
+            controller.startScan();
+          }
+        },
+        child: Icon(
+          controller.isScanning ? Icons.stop : Icons.refresh,
+          color: Colors.white,
+        ),
       ),
     );
   }
 
+  /// Device card widget
   Widget _deviceCard(BuildContext context, ScanResult result) {
-    final BluetoothDevice device = result.device; // real device
+    final BluetoothDevice device = result.device;
     final String name = (device.name.isNotEmpty) ? device.name : "Unknown Device";
     final String id = device.id.toString();
     final int rssi = result.rssi;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(bottom: 5),
       child: Card(
         color: AppColors.cardMint,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         child: Padding(
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.all(10),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -117,19 +119,23 @@ class _DevicePairingBody extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 1),
                     Text(id),
-                    const SizedBox(height: 6),
-                    Text('RSSI: $rssi'),
+                    const SizedBox(height: 1),
+                    // Show just a colored dot instead of text
+                    Row(
+                      children: [
+                        const SizedBox(width: 0),
+                        Text("RSSI: $rssi"),
+                      ],
+                    ),
                   ],
                 ),
               ),
-
               Column(
                 children: [
                   ElevatedButton(
                     onPressed: () async {
-                      // Stop scanning before navigating
                       final controller = Provider.of<DevicePairingController>(context, listen: false);
                       await controller.stopScan();
 
@@ -147,21 +153,14 @@ class _DevicePairingBody extends StatelessWidget {
                     ),
                     child: const Text('Connect'),
                   ),
-                  const SizedBox(height: 8),
-                  const Icon(Icons.wifi, color: Colors.green, size: 26),
+                  const SizedBox(height: 0), // Distance between button and wifi symbol
+                  Icon(Icons.wifi, color: getRssiColor(rssi), size: 26),
                 ],
               )
             ],
           ),
         ),
       ),
-    );
-  }
-
-  Widget _roundIconButton({required IconData icon, required VoidCallback onPressed}) {
-    return Container(
-      decoration: BoxDecoration(color: AppColors.primaryBlue, borderRadius: BorderRadius.circular(20)),
-      child: IconButton(onPressed: onPressed, icon: Icon(icon, color: Colors.white)),
     );
   }
 }
